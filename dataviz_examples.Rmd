@@ -1,0 +1,98 @@
+---
+title: "Data Visualization Examples"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Histogram
+
+```{r histogram}
+
+```
+
+## Density Plot
+
+```{r density}
+
+```
+
+## Quantile Dotplots
+
+```{r dotplot}
+
+```
+
+## Boxplot
+
+```{r boxplot}
+
+```
+
+## Violin Plot
+
+```{r violin}
+
+```
+
+## Ridgeline Plot
+
+```{r ridgeline}
+
+```
+
+## Scatterplot
+
+```{r scatterplot}
+
+```
+
+## Line graph
+
+```{r line}
+
+```
+
+```{r linepoint}
+
+```
+
+## Pairs plots and Correlograms
+
+```{r pairs}
+
+```
+
+```{r corr}
+
+```
+
+## Barplots
+
+```{r barplot}
+
+```
+
+## Dotplot
+
+```{r dotplot}
+
+```
+
+## Heatmap
+
+```{r heatmap}
+
+```
+
+## Composite Plots
+
+```{r composite}
+
+```
+
+```{r facet}
+
+```
