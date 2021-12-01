@@ -21,6 +21,16 @@ terrestrial30minScores <- combined %>% filter(theme == "terrestrial_30min")
 terrestrialDailyScores <- combined %>% filter(theme == "terrestrial_daily")
 ```
 
+```{r loading, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(palmerpenguins)
+library(ggridges)
+
+efi_forecast <- read_csv("https://data.ecoforecast.org/analysis/combined_forecasts_scores.csv.gz")
+
+head(penguins)
+```
+
 ## Histogram
 
 ```{r histogram, fig.cap = "Histogram of scores for freshwater dissolved oxygen forecasts from the EFI NEON Ecological Forecasting Challenge"}
@@ -44,6 +54,7 @@ ggplot(aquaticsScores_oxygen, aes(x = crps)) +
   ylab("Density") + 
   xlab("Continuous Ranked Probability Score")
 ```
+
 ```{r density2D}
 
 download.file("https://data.ecoforecast.org/targets/phenology/phenology-targets.csv.gz",
@@ -65,34 +76,56 @@ ggplot(phenoDat, aes(x = gcc_90, y = rcc_90)) +
 
 ```
 
-## Boxplot
+## Boxplot 
 
-```{r boxplot}
+```{r boxplot, warning=FALSE}
+ggplot(data = penguins) +
+  geom_boxplot(aes(x = species, y = body_mass_g))
 
 ```
 
 ## Violin Plot
 
-```{r violin}
-
+```{r violin, warning=FALSE}
+ggplot(data = penguins) +
+  geom_violin(aes(x = species, y = body_mass_g))
 ```
 
-## Ridgeline Plot
+## Ridgeline Plot - Do we want geom_ridgeline() here instead?
 
-```{r ridgeline}
-
+```{r ridgeline, warning=FALSE}
+ggplot(data = penguins) +
+  geom_density_ridges(aes(x = body_mass_g, y = species))
 ```
 
 ## Scatterplot
 
-```{r scatterplot}
-
+```{r scatterplot, warning=FALSE}
+ggplot(data = penguins) +
+  geom_point(aes(x = flipper_length_mm, y = body_mass_g))
 ```
 
 ## Line graph
 
+A basic line graph using data on Loblolly pine seed growth. Note that we filter the dataset to use the data from only one seedling:
 ```{r line}
+ggplot(data = filter(Loblolly, Seed == 301)) +
+  geom_line(aes(x = age, y = height))
+```
 
+We might want to show the points used to generate our line:
+```{r line 2}
+ggplot(data = filter(Loblolly, Seed == 301),
+       aes(x = age, y = height)) +
+  geom_line() +
+  geom_point(color = "black", pch = 21, fill = "green")
+```
+
+Or, we may want to include all seedlings in our line graph, with separate lines for each:
+```{r line 3}
+ggplot(data = Loblolly,
+       aes(x = age, y = height, color = Seed)) +
+  geom_line()
 ```
 
 ```{r linepoint}
@@ -111,8 +144,20 @@ ggplot(phenoDat, aes(x = gcc_90, y = rcc_90)) +
 
 ## Barplots
 
+The default for `geom_bar()` is to count the number of observations of the variable provided, in this case island. 
 ```{r barplot}
+ggplot(data = penguins) +
+  geom_bar(aes(x = island))
+```
 
+However, we can also create a small summary table if we want to, for example, plot averages by group. Below we plot the average body mass by island:
+```{r barplot 2}
+penguin_agg <- penguins %>%
+  group_by(island) %>%
+  summarise(mean_mass_g = mean(body_mass_g, na.rm = TRUE))
+
+ggplot(data = penguin_agg) +
+  geom_bar(aes(x = island, y = mean_mass_g), stat = "identity")
 ```
 
 ## Dotplot
