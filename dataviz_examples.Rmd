@@ -4,24 +4,64 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE) # Show code and plots
+
+# Load packages
+library(tidyverse)
+library(cowplot)
+
+# Get forecasts
+combined <- read_csv("https://data.ecoforecast.org/analysis/combined_forecasts_scores.csv.gz")
+phenoScores <- combined %>% filter(theme == "phenology")
+tickScores <- combined %>% filter(theme == "ticks")
+aquaticsScores_temp <- combined %>% filter(theme == "aquatics", target == "temperature")
+aquaticsScores_oxygen <- combined %>% filter(theme == "aquatics", target == "oxygen")
+beetlesScores <- combined %>% filter(theme == "beetles")
+terrestrial30minScores <- combined %>% filter(theme == "terrestrial_30min")
+terrestrialDailyScores <- combined %>% filter(theme == "terrestrial_daily")
 ```
 
 ## Histogram
 
-```{r histogram}
+```{r histogram, fig.cap = "Histogram of scores for freshwater dissolved oxygen forecasts from the EFI NEON Ecological Forecasting Challenge"}
 
+ggplot(aquaticsScores_oxygen, aes(x = crps)) +
+  geom_bar()+
+  scale_x_binned(limits = c(0,2), n.breaks = 10)+
+  theme_cowplot()+
+  theme(panel.grid.major.y = element_line())+
+  ylab("Number of Forecasts") + 
+  xlab("Continuous Ranked Probability Score")
 ```
 
 ## Density Plot
 
 ```{r density}
+ggplot(aquaticsScores_oxygen, aes(x = crps)) +
+  geom_density(bw = 0.05, color = "dodgerblue4", fill = "dodgerblue1")+
+  theme_cowplot()+
+  xlim(0,2)+
+  ylab("Density") + 
+  xlab("Continuous Ranked Probability Score")
+```
+```{r density2D}
 
+download.file("https://data.ecoforecast.org/targets/phenology/phenology-targets.csv.gz",
+              "phenology-targets.csv.gz")
+
+phenoDat <- read.csv("phenology-targets.csv.gz",header=TRUE)
+sites <- unique(as.character(phenoDat$siteID))
+
+ggplot(phenoDat, aes(x = gcc_90, y = rcc_90)) +
+  geom_density_2d()+
+  theme_classic()+
+  ylab("Greenness Index") + 
+  xlab("Redness Index")
 ```
 
 ## Quantile Dotplots
 
-```{r dotplot}
+```{r qdotplot}
 
 ```
 
