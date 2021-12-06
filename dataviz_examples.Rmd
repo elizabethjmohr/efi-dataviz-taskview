@@ -9,6 +9,8 @@ knitr::opts_chunk$set(echo = TRUE) # Show code and plots
 # Load packages
 library(tidyverse)
 library(cowplot)
+library(palmerpenguins)
+library(ggridges)
 
 # Get forecasts
 combined <- read_csv("https://data.ecoforecast.org/analysis/combined_forecasts_scores.csv.gz")
@@ -19,16 +21,6 @@ aquaticsScores_oxygen <- combined %>% filter(theme == "aquatics", target == "oxy
 beetlesScores <- combined %>% filter(theme == "beetles")
 terrestrial30minScores <- combined %>% filter(theme == "terrestrial_30min")
 terrestrialDailyScores <- combined %>% filter(theme == "terrestrial_daily")
-```
-
-```{r loading, warning=FALSE, message=FALSE}
-library(tidyverse)
-library(palmerpenguins)
-library(ggridges)
-
-efi_forecast <- read_csv("https://data.ecoforecast.org/analysis/combined_forecasts_scores.csv.gz")
-
-head(penguins)
 ```
 
 ## Histogram
@@ -78,54 +70,72 @@ ggplot(phenoDat, aes(x = gcc_90, y = rcc_90)) +
 
 ## Boxplot 
 
-```{r boxplot, warning=FALSE}
+```{r boxplot, warning=FALSE, fig.cap="An example boxplot with penguin species on the x-axis and body mass on the y-axis."}
 ggplot(data = penguins) +
-  geom_boxplot(aes(x = species, y = body_mass_g))
+  geom_boxplot(aes(x = species, y = body_mass_g)) +
+  theme_cowplot() +
+  xlab("Species") +
+  ylab("Body Mass (g)")
 
 ```
 
 ## Violin Plot
 
-```{r violin, warning=FALSE}
+```{r violin, warning=FALSE, fig.cap="An example violin plot with penguin species on the x-axis and body mass on the y-axis."}
 ggplot(data = penguins) +
-  geom_violin(aes(x = species, y = body_mass_g))
+  geom_violin(aes(x = species, y = body_mass_g)) +
+  theme_cowplot() +
+  xlab("Species") +
+  ylab("Body Mass (g)")
 ```
 
 ## Ridgeline Plot - Do we want geom_ridgeline() here instead?
 
-```{r ridgeline, warning=FALSE}
+```{r ridgeline, warning=FALSE, fig.cap="An example of staggered density plots. Penguin species are plotted on the y-axis and body mass is plotted on the x-axis."}
 ggplot(data = penguins) +
-  geom_density_ridges(aes(x = body_mass_g, y = species))
+  geom_density_ridges(aes(x = body_mass_g, y = species)) +
+  theme_cowplot() +
+  xlab("Species") +
+  ylab("Body Mass (g)")
 ```
 
 ## Scatterplot
 
-```{r scatterplot, warning=FALSE}
+```{r scatterplot, warning=FALSE, fig.cap="An example scatterplot with penguin flipper length on the x-axis and body mass on the y-axis."}
 ggplot(data = penguins) +
-  geom_point(aes(x = flipper_length_mm, y = body_mass_g))
+  geom_point(aes(x = flipper_length_mm, y = body_mass_g)) +
+  theme_cowplot() +
+  xlab("Flipper Length (mm)") +
+  ylab("Body Mass (g)")
 ```
 
 ## Line graph
 
-A basic line graph using data on Loblolly pine seed growth. Note that we filter the dataset to use the data from only one seedling:
-```{r line}
+```{r line, fig.cap="An example line graph using data on Loblolly pine seedling growth. Age of seedling is on the x-axis and height is on the y-axis. Note that we filter the dataset to use the data from only one seedling."}
 ggplot(data = filter(Loblolly, Seed == 301)) +
-  geom_line(aes(x = age, y = height))
+  geom_line(aes(x = age, y = height)) +
+  theme_cowplot() +
+  xlab("Age") +
+  ylab("Height")
 ```
 
-We might want to show the points used to generate our line:
-```{r line 2}
+```{r line 2, fig.cap="A line graph similar to the previous example, except with added points showing the data used to generate the line."}
 ggplot(data = filter(Loblolly, Seed == 301),
        aes(x = age, y = height)) +
   geom_line() +
-  geom_point(color = "black", pch = 21, fill = "green")
+  geom_point(color = "black", pch = 21, fill = "green", size = 2) +
+  theme_cowplot() +
+  xlab("Age") +
+  ylab("Height")
 ```
 
-Or, we may want to include all seedlings in our line graph, with separate lines for each:
-```{r line 3}
+```{r line 3, fig.cap="A line graph where seed identifiers are used to produce separate lines for each seed's growth data."}
 ggplot(data = Loblolly,
        aes(x = age, y = height, color = Seed)) +
-  geom_line()
+  geom_line() +
+  theme_cowplot() +
+  xlab("Age") +
+  ylab("Height")
 ```
 
 ```{r linepoint}
@@ -144,20 +154,24 @@ ggplot(data = Loblolly,
 
 ## Barplots
 
-The default for `geom_bar()` is to count the number of observations of the variable provided, in this case island. 
-```{r barplot}
+```{r barplot, fig.cap="An example barplot with island name on the x-axis and penguin observations on the y-axis. Note that the default for `geom_bar()` is to count the number of rows of each level of the variable on the x-axis, in this case `island`."}
 ggplot(data = penguins) +
-  geom_bar(aes(x = island))
+  geom_bar(aes(x = island)) +
+  theme_cowplot() +
+  xlab("Island") +
+  ylab("Count")
 ```
 
-However, we can also create a small summary table if we want to, for example, plot averages by group. Below we plot the average body mass by island:
-```{r barplot 2}
+```{r barplot 2, fig.cap="A barplot showing mean penguin mass by island. To create barplots with group summaries we first need to create a summary table and then use the `stat = 'identity'` argument in `geom_bar()`."}
 penguin_agg <- penguins %>%
   group_by(island) %>%
   summarise(mean_mass_g = mean(body_mass_g, na.rm = TRUE))
 
 ggplot(data = penguin_agg) +
-  geom_bar(aes(x = island, y = mean_mass_g), stat = "identity")
+  geom_bar(aes(x = island, y = mean_mass_g), stat = "identity") +
+  theme_cowplot() +
+  xlab("Island") +
+  ylab("Count")
 ```
 
 ## Dotplot
