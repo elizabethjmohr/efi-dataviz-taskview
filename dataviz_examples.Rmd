@@ -4,62 +4,79 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE) # Show code and plots
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # Show code and plots
 
 # Load packages
 library(tidyverse)
+library(lubridate)
 library(cowplot)
 library(palmerpenguins)
 library(ggridges)
+library(ggdist)
+library(ggExtra)
+library(viridis)
+
+# Get target data
+aquatics_targets <- readr::read_csv("https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz")
+#terrestrial_30min_targets <- readr::read_csv("https://data.ecoforecast.org/targets/terrestrial/terrestrial_30min-targets.csv.gz", guess_max = 1e6)
+#terrestrial_daily_targets <- readr::read_csv("https://data.ecoforecast.org/targets/terrestrial/terrestrial_daily-targets.csv.gz", guess_max = 1e6)
+pheno_targets <- readr::read_csv("https://data.ecoforecast.org/targets/phenology/phenology-targets.csv.gz")
+#tick_targets <- readr::read_csv("https://data.ecoforecast.org/targets/ticks/ticks-targets.csv.gz")
+beetle_targets <- readr::read_csv("https://data.ecoforecast.org/targets/beetles/beetles-targets.csv.gz", guess_max = 1e6)
 
 # Get forecasts
 combined <- read_csv("https://data.ecoforecast.org/analysis/combined_forecasts_scores.csv.gz")
-phenoScores <- combined %>% filter(theme == "phenology")
-tickScores <- combined %>% filter(theme == "ticks")
-aquaticsScores_temp <- combined %>% filter(theme == "aquatics", target == "temperature")
-aquaticsScores_oxygen <- combined %>% filter(theme == "aquatics", target == "oxygen")
-beetlesScores <- combined %>% filter(theme == "beetles")
-terrestrial30minScores <- combined %>% filter(theme == "terrestrial_30min")
-terrestrialDailyScores <- combined %>% filter(theme == "terrestrial_daily")
+aquatic_temp <- combined %>% 
+  filter(theme == "aquatics", target == "temperature", !team == "EFInull")
+#aquatic_oxygen <- combined %>%
+  #filter(theme == "aquatics", target == "oxygen", !team == "EFInull")
+#terrestrial_30min <- combined %>% 
+  #filter(theme == "terrestrial_30min", !team == "EFInull")
+#terrestrial_daily <- combined %>% 
+  #filter(theme == "terrestrial_daily", !team == "EFInull")
+#pheno <- combined %>% 
+  #filter(theme == "phenology", !team == "EFInull")
+#ticks <- combined %>% 
+  #filter(theme == "ticks", !team == "EFInull")
+#beetles <- combined %>% 
+  #filter(theme == "beetles", !team == "EFInull")
 ```
 
 ## Histogram
 
-```{r histogram, fig.cap = "Histogram of scores for freshwater dissolved oxygen forecasts from the EFI NEON Ecological Forecasting Challenge"}
+```{r histogram, fig.cap = "Histogram of scores for water temperature forecasts from the EFI NEON Ecological Forecasting Challenge"}
 
-ggplot(aquaticsScores_oxygen, aes(x = crps)) +
+ggplot(aquatic_temp, aes(x = crps)) +
   geom_bar()+
-  scale_x_binned(limits = c(0,2), n.breaks = 10)+
+  scale_x_binned()+
+  theme_minimal_hgrid()+
+  ylab("number of forecasts") + 
+  xlab("continuous ranked probability score")
+```
+```{r histogram2D}
+p <- ggplot(pheno_targets, aes(x = gcc_90, y = rcc_90)) +
+  geom_hex(bins = 60)+
+  geom_point(color = "transparent")+
+  ylab("greenness index") + 
+  xlab("redness index")+
   theme_cowplot()+
-  theme(panel.grid.major.y = element_line())+
-  ylab("Number of Forecasts") + 
-  xlab("Continuous Ranked Probability Score")
+  scale_fill_viridis()+
+  theme(legend.position = c(0.8, 0.8))
+
+ggMarginal(p,type = "histogram", fill = "grey80")
+
 ```
 
 ## Density Plot
 
-```{r density}
-ggplot(aquaticsScores_oxygen, aes(x = crps)) +
-  geom_density(bw = 0.05, color = "dodgerblue4", fill = "dodgerblue1")+
-  theme_cowplot()+
-  xlim(0,2)+
-  ylab("Density") + 
-  xlab("Continuous Ranked Probability Score")
-```
-
-```{r density2D}
-
-download.file("https://data.ecoforecast.org/targets/phenology/phenology-targets.csv.gz",
-              "phenology-targets.csv.gz")
-
-phenoDat <- read.csv("phenology-targets.csv.gz",header=TRUE)
-sites <- unique(as.character(phenoDat$siteID))
-
-ggplot(phenoDat, aes(x = gcc_90, y = rcc_90)) +
-  geom_density_2d()+
-  theme_classic()+
-  ylab("Greenness Index") + 
-  xlab("Redness Index")
+```{r density, fig.cap = "Density plot for a log-normal distribution with mean = 0 and standard deviation = 1"}
+ggplot() +
+  geom_area(data = tibble(x = seq(0.01, 4, 0.01), y = dlnorm(seq(0.01, 4, 0.01))), aes(x = x, y = y), fill = "#66CCEE", color = "black")+
+  #geom_function(data = tibble(x = c(0,3)), aes(x = x), fun = dlnorm)+
+  xlim(c(0,4))+
+  theme_minimal_hgrid()+
+  ylab("probability density")+
+  theme(axis.title.x = element_blank())
 ```
 
 ## Quantile Dotplots
@@ -70,76 +87,69 @@ ggplot(phenoDat, aes(x = gcc_90, y = rcc_90)) +
 
 ## Boxplot 
 
-```{r boxplot, warning=FALSE, fig.cap="An example boxplot with penguin species on the x-axis and body mass on the y-axis."}
+```{r boxplot, warning=FALSE, fig.cap="Body-mass distributions for three penguin species shown as boxplots."}
 ggplot(data = penguins) +
-  geom_boxplot(aes(x = species, y = body_mass_g)) +
-  theme_cowplot() +
-  xlab("Species") +
-  ylab("Body Mass (g)")
-
+  geom_boxplot(aes(x = species, y = body_mass_g), fill = "#BBBBBB") +
+  theme_minimal() +
+  xlab("species") +
+  ylab("body mass (g)")
 ```
 
 ## Violin Plot
 
-```{r violin, warning=FALSE, fig.cap="An example violin plot with penguin species on the x-axis and body mass on the y-axis."}
+```{r violin, warning=FALSE, fig.cap="Body-mass distributions for three penguin species shown as violin plots."}
 ggplot(data = penguins) +
-  geom_violin(aes(x = species, y = body_mass_g)) +
+  geom_violin(aes(x = species, y = body_mass_g), fill = "#BBBBBB") +
   theme_cowplot() +
-  xlab("Species") +
-  ylab("Body Mass (g)")
+  xlab("species") +
+  ylab("body mass (g)")
 ```
 
-## Ridgeline Plot - Do we want geom_ridgeline() here instead?
+## Ridgeline Plot 
 
-```{r ridgeline, warning=FALSE, fig.cap="An example of staggered density plots. Penguin species are plotted on the y-axis and body mass is plotted on the x-axis."}
+```{r ridgeline, warning=FALSE, fig.cap="Body-mass distributions for three penguin species shown as staggered density plots or 'ridgeline' plots."}
 ggplot(data = penguins) +
-  geom_density_ridges(aes(x = body_mass_g, y = species)) +
-  theme_cowplot() +
-  xlab("Species") +
-  ylab("Body Mass (g)")
+  geom_density_ridges(aes(x = body_mass_g, y = species), fill = "#BBBBBB") +
+  theme_minimal_grid() +
+  xlab("species") +
+  ylab("body mass (g)")
 ```
 
 ## Scatterplot
 
-```{r scatterplot, warning=FALSE, fig.cap="An example scatterplot with penguin flipper length on the x-axis and body mass on the y-axis."}
+```{r scatterplot, warning=FALSE, fig.cap="Scatterplot of penguin flipper length vs. body mass."}
 ggplot(data = penguins) +
   geom_point(aes(x = flipper_length_mm, y = body_mass_g)) +
-  theme_cowplot() +
-  xlab("Flipper Length (mm)") +
-  ylab("Body Mass (g)")
+  theme_minimal_grid() +
+  xlab("flipper length (mm)") +
+  ylab("body mass (g)")
 ```
 
 ## Line graph
 
-```{r line, fig.cap="An example line graph using data on Loblolly pine seedling growth. Age of seedling is on the x-axis and height is on the y-axis. Note that we filter the dataset to use the data from only one seedling."}
-ggplot(data = filter(Loblolly, Seed == 301)) +
-  geom_line(aes(x = age, y = height)) +
-  theme_cowplot() +
-  xlab("Age") +
-  ylab("Height")
+```{r line, fig.cap="Line graph of dissolved oxygen concentrations at the Posey Creek NEON site, 2019-2020"}
+aquatics_targets %>% 
+  filter(year(time) <= 2020, 
+         year(time) >= 2019,
+         siteID == "POSE") %>%
+  ggplot(aes(x = time, y = oxygen))+
+  geom_line()+
+  theme_minimal_grid()+
+  ylab(expression(paste("dissolved oxygen (mg ", L^-1, ")")))+
+  theme(axis.title.x = element_blank())
 ```
 
-```{r line 2, fig.cap="A line graph similar to the previous example, except with added points showing the data used to generate the line."}
-ggplot(data = filter(Loblolly, Seed == 301),
-       aes(x = age, y = height)) +
-  geom_line() +
-  geom_point(color = "black", pch = 21, fill = "green", size = 2) +
-  theme_cowplot() +
-  xlab("Age") +
-  ylab("Height")
-```
-
-```{r line 3, fig.cap="A line graph where seed identifiers are used to produce separate lines for each seed's growth data."}
-ggplot(data = Loblolly,
-       aes(x = age, y = height, color = Seed)) +
-  geom_line() +
-  theme_cowplot() +
-  xlab("Age") +
-  ylab("Height")
-```
-
-```{r linepoint}
-
+```{r pointline, fig.cap="Line graph with dots showing dissolved oxygen concentrations at the Posey Creek NEON site, June 2021"}
+aquatics_targets %>% 
+  filter(year(time) == 2021, 
+         month(time) == 6,
+         siteID == "POSE") %>%
+  ggplot(aes(x = time, y = oxygen))+
+  geom_line()+
+  geom_point()+
+  theme_minimal_grid()+
+  ylab(expression(paste("dissolved oxygen (mg ", L^-1, ")")))+
+  theme(axis.title.x = element_blank())
 ```
 
 ## Pairs plots and Correlograms
@@ -154,24 +164,12 @@ ggplot(data = Loblolly,
 
 ## Barplots
 
-```{r barplot, fig.cap="An example barplot with island name on the x-axis and penguin observations on the y-axis. Note that the default for `geom_bar()` is to count the number of rows of each level of the variable on the x-axis, in this case `island`."}
+```{r barplot, fig.cap="Number of penguins observed at three islands in Palmer Archipelago, Antarctica, 2007-2009."}
 ggplot(data = penguins) +
-  geom_bar(aes(x = island)) +
-  theme_cowplot() +
-  xlab("Island") +
-  ylab("Count")
-```
-
-```{r barplot 2, fig.cap="A barplot showing mean penguin mass by island. To create barplots with group summaries we first need to create a summary table and then use the `stat = 'identity'` argument in `geom_bar()`."}
-penguin_agg <- penguins %>%
-  group_by(island) %>%
-  summarise(mean_mass_g = mean(body_mass_g, na.rm = TRUE))
-
-ggplot(data = penguin_agg) +
-  geom_bar(aes(x = island, y = mean_mass_g), stat = "identity") +
-  theme_cowplot() +
-  xlab("Island") +
-  ylab("Count")
+  geom_bar(aes(x = island), fill = "#4477AA") +
+  theme_minimal_hgrid() +
+  xlab("island") +
+  ylab("count")
 ```
 
 ## Dotplot
