@@ -12,16 +12,18 @@ library(lubridate)
 library(cowplot)
 library(palmerpenguins)
 library(ggridges)
+library(GGally)
 library(ggdist)
 library(ggExtra)
 library(viridis)
+library(RColorBrewer)
 
 # Get target data
 aquatics_targets <- readr::read_csv("https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz")
 #terrestrial_30min_targets <- readr::read_csv("https://data.ecoforecast.org/targets/terrestrial/terrestrial_30min-targets.csv.gz", guess_max = 1e6)
-#terrestrial_daily_targets <- readr::read_csv("https://data.ecoforecast.org/targets/terrestrial/terrestrial_daily-targets.csv.gz", guess_max = 1e6)
+terrestrial_daily_targets <- readr::read_csv("https://data.ecoforecast.org/targets/terrestrial/terrestrial_daily-targets.csv.gz", guess_max = 1e6)
 pheno_targets <- readr::read_csv("https://data.ecoforecast.org/targets/phenology/phenology-targets.csv.gz")
-#tick_targets <- readr::read_csv("https://data.ecoforecast.org/targets/ticks/ticks-targets.csv.gz")
+tick_targets <- readr::read_csv("https://data.ecoforecast.org/targets/ticks/ticks-targets.csv.gz")
 beetle_targets <- readr::read_csv("https://data.ecoforecast.org/targets/beetles/beetles-targets.csv.gz", guess_max = 1e6)
 
 # Get forecasts
@@ -71,7 +73,7 @@ ggMarginal(p,type = "histogram", fill = "grey80")
 
 ```{r density, fig.cap = "Density plot for a log-normal distribution with mean = 0 and standard deviation = 1"}
 ggplot() +
-  geom_area(data = tibble(x = seq(0.01, 4, 0.01), y = dlnorm(seq(0.01, 4, 0.01))), aes(x = x, y = y), fill = "#66CCEE", color = "black")+
+  geom_area(data = tibble(x = seq(0.01, 4, 0.01), y = dlnorm(seq(0.01, 4, 0.01))), aes(x = x, y = y), fill = "#4477AA", color = "black")+
   #geom_function(data = tibble(x = c(0,3)), aes(x = x), fun = dlnorm)+
   xlim(c(0,4))+
   theme_minimal_hgrid()+
@@ -154,12 +156,11 @@ aquatics_targets %>%
 
 ## Pairs plots and Correlograms
 
-```{r pairs}
-
-```
-
-```{r corr}
-
+```{r pairs, fig.cap = "Combined scatterplot matrix and correlation matrix for three targets in the daily terrestrial forecast challenge."}
+terrestrial_daily_targets %>%
+  select("ecosystem exchange" = "nee", "evapotranspiration" = "le", "soil moisture" = "vswc") %>% 
+  ggpairs()+
+  theme_minimal_grid(font_size = 12)
 ```
 
 ## Barplots
@@ -172,16 +173,23 @@ ggplot(data = penguins) +
   ylab("count")
 ```
 
-## Dotplot
-
-```{r dotplot}
-
-```
-
 ## Heatmap
 
-```{r heatmap}
-
+```{r heatmap, fig.cap = "Heatmap of beetles species richness at 7 NEON sites, summer 2020."}
+beetle_targets %>%
+  filter(year(time) == 2020,
+         month(time) > 5,
+         month(time) < 10,
+         siteID %in% c("UNDE", "STEI", "SCBI", "PUUM", "DCFS", "CPER", "BLAN")) %>%
+  mutate(month = month(time)) %>%
+ggplot(aes(x = month, y = siteID, fill = richness)) +
+  geom_tile(width = 0.95, height = 0.95) + 
+  theme_cowplot()+
+  scale_fill_distiller(palette = "Blues") +
+  ylab("site")+
+  theme(axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        panel.background = element_rect(fill = "#D3D3D3"))
 ```
 
 ## Composite Plots
@@ -190,6 +198,17 @@ ggplot(data = penguins) +
 
 ```
 
-```{r facet}
-
+```{r facet, fig.cap = "Facet-plot showing tick counts from 3 NEON sites"}
+tick_targets %>% 
+  filter(siteID %in% c("SERC", "SCBI", "TALL"),
+         Year == 2016) %>%
+  pivot_longer(cols = c("amblyomma_americanum","ixodes_scapularis"),
+               names_to = "species", 
+               values_to = "count") %>%
+ggplot(aes(x = epiWeek, y = count, color = species)) +
+  geom_point()+
+  facet_wrap(vars(siteID), nrow = 3)+
+  xlab("ISO week")+
+  scale_color_manual(values = c("#BB5566", "#004488"))+
+  theme(legend.position = "top")
 ```
