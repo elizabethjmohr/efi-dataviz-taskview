@@ -10,12 +10,13 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # Show code
 library(tidyverse)
 library(lubridate)
 library(cowplot)
-library(palmerpenguins)
 library(ggridges)
 library(GGally)
 library(ggdist)
 library(ggExtra)
 library(viridis)
+
+library(palmerpenguins)
 
 # Get target data
 aquatics_targets <- readr::read_csv("https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz")
@@ -82,7 +83,20 @@ ggplot() +
 
 ## Quantile Dotplots
 
-```{r qdotplot}
+```{r qdotplot, fig.cap = "Quantile dotplot showing the probability of temperature exceeding 19 °C for a theoretical, normally-distributed temperature forecast with mean = 17.7 °C and sd = 1"}
+set.seed(123)
+tempSample <- tibble(temp = rnorm(10000, mean = 17.7, sd = 1))
+ggplot(tempSample, aes(x = temp, fill = stat(x > 19))) + 
+  stat_dots(quantiles = 30)+
+  geom_vline(xintercept = 19, linetype = 2, color = "gray50")+
+  theme_cowplot() +
+  xlab("Temperature (°C)")+
+  scale_fill_manual(values = c("#BB5566", "#004488"))+
+  theme(legend.position = 'none',
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.line.y = element_blank(), 
+        axis.ticks.y = element_blank())
 
 ```
 
