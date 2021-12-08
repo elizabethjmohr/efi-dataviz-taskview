@@ -16,7 +16,6 @@ library(GGally)
 library(ggdist)
 library(ggExtra)
 library(viridis)
-library(RColorBrewer)
 
 # Get target data
 aquatics_targets <- readr::read_csv("https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz")
@@ -175,21 +174,54 @@ ggplot(data = penguins) +
 
 ## Heatmap
 
-```{r heatmap, fig.cap = "Heatmap of beetles species richness at 7 NEON sites, summer 2020."}
-beetle_targets %>%
-  filter(year(time) == 2020,
-         month(time) > 5,
-         month(time) < 10,
-         siteID %in% c("UNDE", "STEI", "SCBI", "PUUM", "DCFS", "CPER", "BLAN")) %>%
-  mutate(month = month(time)) %>%
-ggplot(aes(x = month, y = siteID, fill = richness)) +
-  geom_tile(width = 0.95, height = 0.95) + 
-  theme_cowplot()+
-  scale_fill_distiller(palette = "Blues") +
+```{r heatmap, fig.cap = "Heatmap of monthly beetles species richness observations at 47 NEON sites, 2017-2019.", fig.height = 6, fig.width  = 5}
+siteIDLevels <- beetle_targets %>%
+  filter(year(time) >=2017,
+         year(time) <=2019) %>%
+  group_by(siteID) %>%
+  summarise(meanRichness = mean(richness, na.rm = TRUE)) %>%
+  arrange(meanRichness) %>%
+  pull(siteID)
+
+expand_grid(year = 2017:2019,
+            month = 1:12, 
+            siteID = unique(beetle_targets$siteID)) %>%
+  mutate(monthYear = paste0(year, "-", if_else(nchar(month) == 1, paste0("0", month), as.character(month)))) %>%
+  left_join(beetle_targets %>%
+    mutate(month = month(time),
+         year = year(time), 
+         monthYear = paste0(year, "-", if_else(nchar(month) == 1, paste0("0", month), as.character(month)))) %>%
+    filter(year >= 2017, year <= 2019),
+  by = c("siteID", "monthYear")) %>%
+  mutate(siteID = factor(siteID, levels = siteIDLevels)) %>%
+ggplot(aes(x = monthYear, y = siteID)) +
+  geom_tile(width = 0.9, height = 0.9, aes(fill = richness)) + 
+  theme_cowplot(font_size = 13)+
+  scale_fill_viridis(option = "B", na.value = "#BBBBBB", direction = -1, end = 0.9) +
   ylab("site")+
   theme(axis.line = element_blank(),
-        axis.ticks = element_blank(),
-        panel.background = element_rect(fill = "#D3D3D3"))
+        axis.ticks = element_blank(), 
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        panel.background = element_rect(fill = "white"),
+        axis.text.y = element_text(size = 9)) +
+      coord_cartesian(clip = 'off') +
+annotate("text", 
+         x = c(6, 18, 30), 
+         y = c(-3.7, -3.7, -3.7), 
+         label = c("2017", "2018", "2019")) +
+  annotate("segment", 
+           x = 1, xend = 12, y = -2.8, yend = -2.8) + 
+  annotate("segment", 
+           x = 13, xend = 24, y = -2.8, yend = -2.8) + 
+  annotate("segment", 
+           x = 25, xend = 37, y = -2.8, yend = -2.8) + 
+annotate("text",
+         x = 1:36,
+         y = rep(-1, times = 36),
+         label = rep(c("Jan", "Feb", "March", "April", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"), times = 3),
+         angle = '90', 
+         size = 3)
 ```
 
 ## Composite Plots
