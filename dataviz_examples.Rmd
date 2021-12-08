@@ -174,7 +174,7 @@ ggplot(data = penguins) +
 
 ## Heatmap
 
-```{r heatmap, fig.cap = "Heatmap of monthly beetles species richness observations at 47 NEON sites, 2017-2019.", fig.height = 6, fig.width  = 5}
+```{r heatmap, fig.cap = "Heatmap of monthly beetle species richness observations at 47 NEON sites, 2017-2019.", fig.height = 6, fig.width  = 5}
 siteIDLevels <- beetle_targets %>%
   filter(year(time) >=2017,
          year(time) <=2019) %>%
@@ -226,21 +226,27 @@ annotate("text",
 
 ## Composite Plots
 
-```{r composite}
+```{r facet, fig.cap = "Scatterplots showing tick counts per square meter for epidemiological weeks during which sampling occurred in 2019. Plots are faceted by NEON site and tick species."}
 
-```
-
-```{r facet, fig.cap = "Facet-plot showing tick counts from 3 NEON sites"}
-tick_targets %>% 
-  filter(siteID %in% c("SERC", "SCBI", "TALL"),
-         Year == 2016) %>%
+species.labs <- c("amblyomma_americanum" = "Amblyomma americanum", 
+                  "ixodes_scapularis" = "Ixodes scapularis")
+tick_targets %>%
+  drop_na(totalSampledArea) %>%
+  filter(Year == 2019, siteID %in% c("ORNL", "SCBI", "SERC")) %>%
+  group_by(epiWeek, siteID) %>%
+  summarise(amblyomma_americanum = mean(amblyomma_americanum/totalSampledArea, na.rm = TRUE), 
+            ixodes_scapularis = mean(ixodes_scapularis/totalSampledArea, na.rm = TRUE)) %>%
   pivot_longer(cols = c("amblyomma_americanum","ixodes_scapularis"),
                names_to = "species", 
-               values_to = "count") %>%
-ggplot(aes(x = epiWeek, y = count, color = species)) +
-  geom_point()+
-  facet_wrap(vars(siteID), nrow = 3)+
+               values_to = "ticks_m2_week") %>%
+ggplot(aes(x = epiWeek, y = ticks_m2_week, color = species)) +
+  geom_point(size = 2.5)+
+  facet_grid(species ~ siteID,
+             labeller = labeller(species = species.labs))+
+  xlim(c(10,45))+
   xlab("ISO week")+
+  ylab(expression(paste("number of ticks per ", m^2)))+
   scale_color_manual(values = c("#BB5566", "#004488"))+
-  theme(legend.position = "top")
+  theme(legend.position = "none",
+        strip.text.y = element_text(face = "italic"))
 ```
