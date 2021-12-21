@@ -20,42 +20,28 @@ library(palmerpenguins)
 
 # Get target data
 aquatics_targets <- readr::read_csv("https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz")
-#terrestrial_30min_targets <- readr::read_csv("https://data.ecoforecast.org/targets/terrestrial/terrestrial_30min-targets.csv.gz", guess_max = 1e6)
 terrestrial_daily_targets <- readr::read_csv("https://data.ecoforecast.org/targets/terrestrial/terrestrial_daily-targets.csv.gz", guess_max = 1e6)
 pheno_targets <- readr::read_csv("https://data.ecoforecast.org/targets/phenology/phenology-targets.csv.gz")
 tick_targets <- readr::read_csv("https://data.ecoforecast.org/targets/ticks/ticks-targets.csv.gz")
 beetle_targets <- readr::read_csv("https://data.ecoforecast.org/targets/beetles/beetles-targets.csv.gz", guess_max = 1e6)
 
 # Get forecasts
-combined <- read_csv("https://data.ecoforecast.org/analysis/combined_forecasts_scores.csv.gz")
-aquatic_temp <- combined %>% 
-  filter(theme == "aquatics", target == "temperature", !team == "EFInull")
-#aquatic_oxygen <- combined %>%
-  #filter(theme == "aquatics", target == "oxygen", !team == "EFInull")
-#terrestrial_30min <- combined %>% 
-  #filter(theme == "terrestrial_30min", !team == "EFInull")
-#terrestrial_daily <- combined %>% 
-  #filter(theme == "terrestrial_daily", !team == "EFInull")
-#pheno <- combined %>% 
-  #filter(theme == "phenology", !team == "EFInull")
-#ticks <- combined %>% 
-  #filter(theme == "ticks", !team == "EFInull")
-#beetles <- combined %>% 
-  #filter(theme == "beetles", !team == "EFInull")
+forecasts <- read_csv("https://data.ecoforecast.org/analysis/combined_forecasts_scores.csv.gz")
 ```
 
 ## Histogram
 
 ```{r histogram, fig.cap = "Histogram of scores for water temperature forecasts from the EFI NEON Ecological Forecasting Challenge"}
 
-ggplot(aquatic_temp, aes(x = crps)) +
+ggplot(forecasts %>% 
+  filter(theme == "aquatics", target == "temperature", !team == "EFInull"), aes(x = crps)) +
   geom_bar()+
   scale_x_binned()+
   theme_minimal_hgrid()+
   ylab("number of forecasts") + 
   xlab("continuous ranked probability score")
 ```
-```{r histogram2D}
+```{r histogram2D, fig.cap = "Hexagonal heatmap showing the joint distribution of greenness chromatic coordinate and redness chromatic coordinate at the six NEON sites in the phenology forecast challenge."}
 p <- ggplot(pheno_targets, aes(x = gcc_90, y = rcc_90)) +
   geom_hex(bins = 60)+
   geom_point(color = "transparent")+
@@ -132,12 +118,18 @@ ggplot(data = penguins) +
 
 ## Scatterplot
 
-```{r scatterplot, warning=FALSE, fig.cap="Scatterplot of penguin flipper length vs. body mass."}
-ggplot(data = penguins) +
-  geom_point(aes(x = flipper_length_mm, y = body_mass_g)) +
-  theme_minimal_grid() +
-  xlab("flipper length (mm)") +
-  ylab("body mass (g)")
+```{r scatterplot, warning=FALSE, fig.cap="Scatterplot of dissolved oxygen concentrations vs. temperature at the Posey Creek NEON site, 2019-2020"}
+aquatics_targets %>% 
+  filter(year(time) <= 2020, 
+         year(time) >= 2019,
+         siteID == "POSE") %>%
+  ggplot(aes(x = temperature, y = oxygen))+
+  geom_point(size = 1.2)+
+  ylim(c(7.5, 13.0))+
+  xlim(c(0,25))+
+  theme_minimal_grid()+
+  ylab(expression(paste("dissolved oxygen (mg ", L^-1, ")")))+
+  xlab("Temperature (°C)")
 ```
 
 ## Line graph
