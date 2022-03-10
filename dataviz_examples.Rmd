@@ -9,49 +9,55 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # Show code
 # Load packages
 library(tidyverse)
 library(lubridate)
+library(neon4cast)
+
 library(cowplot)
+library(patchwork)
+library(ggtext)
+library(colorspace)
+library(viridis)
 library(ggridges)
 library(GGally)
 library(ggdist)
 library(ggExtra)
-library(viridis)
-
-library(palmerpenguins)
 
 # Get target data
 aquatics_targets <- readr::read_csv("https://data.ecoforecast.org/targets/aquatics/aquatics-targets.csv.gz")
-terrestrial_daily_targets <- readr::read_csv("https://data.ecoforecast.org/targets/terrestrial/terrestrial_daily-targets.csv.gz", guess_max = 1e6)
+terrestrial_daily_targets <-
+readr::read_csv("https://data.ecoforecast.org/targets/terrestrial_daily/terrestrial_daily-targets.csv.gz", guess_max = 1e6)
 pheno_targets <- readr::read_csv("https://data.ecoforecast.org/targets/phenology/phenology-targets.csv.gz")
 tick_targets <- readr::read_csv("https://data.ecoforecast.org/targets/ticks/ticks-targets.csv.gz")
 beetle_targets <- readr::read_csv("https://data.ecoforecast.org/targets/beetles/beetles-targets.csv.gz", guess_max = 1e6)
-
-# Get forecasts
-forecasts <- read_csv("https://data.ecoforecast.org/analysis/combined_forecasts_scores.csv.gz")
 ```
 
 ## Histogram
 
-```{r histogram, fig.cap = "Histogram of scores for water temperature forecasts from the EFI NEON Ecological Forecasting Challenge"}
-
-ggplot(forecasts %>% 
-  filter(theme == "aquatics", target == "temperature", !team == "EFInull"), aes(x = crps)) +
-  geom_bar()+
+```{r histogram, fig.cap = "Histogram of daily net ecosystem exchange of carbon dioxide (NEE) in February at the Konza Prairie Biological Station NEON site, 2019-2022"}
+terrestrial_daily_targets %>%
+  drop_na(nee) %>%
+  filter(siteID == "KONZ",
+         month(time) == 2) %>%
+  ggplot(aes(x = nee)) + 
+  geom_bar(width = 0.9, fill = "#588B8E")+
   scale_x_binned()+
   theme_minimal_hgrid()+
-  ylab("number of forecasts") + 
-  xlab("continuous ranked probability score")
+  xlab("net ecosystem exchange (g C m<sup>-2</sup> day<sup>-1</sup>)")+
+  ylab("number of days")+
+  theme(axis.title.x = element_markdown())
 ```
+
+
 ```{r histogram2D, fig.cap = "Hexagonal heatmap showing the joint distribution of greenness chromatic coordinate and redness chromatic coordinate at the six NEON sites in the phenology forecast challenge."}
 p <- ggplot(pheno_targets, aes(x = gcc_90, y = rcc_90)) +
-  geom_hex(bins = 60)+
+  geom_hex(bins = 30)+
   geom_point(color = "transparent")+
   ylab("greenness index") + 
   xlab("redness index")+
   theme_cowplot()+
-  scale_fill_viridis()+
+  scale_fill_continuous_sequential(palette = "BurgYl")+
   theme(legend.position = c(0.8, 0.8))
 
-ggMarginal(p,type = "histogram", fill = "grey80")
+ggMarginal(p,type = "histogram", fill = "grey80", color = "white", bins = 30)
 
 ```
 
@@ -59,8 +65,7 @@ ggMarginal(p,type = "histogram", fill = "grey80")
 
 ```{r density, fig.cap = "Density plot for a log-normal distribution with mean = 0 and standard deviation = 1"}
 ggplot() +
-  geom_area(data = tibble(x = seq(0.01, 4, 0.01), y = dlnorm(seq(0.01, 4, 0.01))), aes(x = x, y = y), fill = "#4477AA", color = "black")+
-  #geom_function(data = tibble(x = c(0,3)), aes(x = x), fun = dlnorm)+
+  geom_area(data = tibble(x = seq(0.01, 4, 0.01), y = dlnorm(seq(0.01, 4, 0.01))), aes(x = x, y = y), fill = "grey80", color = "grey40")+
   xlim(c(0,4))+
   theme_minimal_hgrid()+
   ylab("probability density")+
@@ -72,48 +77,65 @@ ggplot() +
 ```{r qdotplot, fig.cap = "Quantile dotplot showing the probability of temperature exceeding 19 °C for a theoretical, normally-distributed temperature forecast with mean = 17.7 °C and sd = 1"}
 set.seed(123)
 tempSample <- tibble(temp = rnorm(10000, mean = 17.7, sd = 1))
-ggplot(tempSample, aes(x = temp, fill = stat(x > 19))) + 
+ggplot(tempSample, aes(x = temp, fill = stat(x > 19), color = stat(x > 19))) + 
   stat_dots(quantiles = 30)+
   geom_vline(xintercept = 19, linetype = 2, color = "gray50")+
   theme_cowplot() +
   xlab("Temperature (°C)")+
-  scale_fill_manual(values = c("#BB5566", "#004488"))+
+  scale_fill_manual(values = c("#517AC9", "#C05D5D"))+
+   scale_color_manual(values = c("#517AC9", "#C05D5D"))+
   theme(legend.position = 'none',
         axis.title.y = element_blank(),
         axis.text.y = element_blank(),
         axis.line.y = element_blank(), 
         axis.ticks.y = element_blank())
-
 ```
 
 ## Boxplot 
 
-```{r boxplot, warning=FALSE, fig.cap="Body-mass distributions for three penguin species shown as boxplots."}
-ggplot(data = penguins) +
-  geom_boxplot(aes(x = species, y = body_mass_g), fill = "#BBBBBB") +
+```{r boxplot, warning=FALSE, fig.cap= "Distributions of daily latent heat flux during May at 5 NEON sites shown as boxplots."}
+terrestrial_daily_targets %>% 
+  drop_na(le) %>%
+  filter(month(time) == 5,
+         siteID %in% c("BART", "CLBJ", "KONZ", "ORNL", "OSBS")) %>%
+  ggplot(aes(x = siteID, y = le))+
+  geom_boxplot(fill = "#78A481") +
   theme_minimal() +
-  xlab("species") +
-  ylab("body mass (g)")
+  xlab("NEON site") +
+  ylab("latent heat flux (W m<sup>-2</sup>)")+
+  theme(axis.title.y = element_markdown())
+
 ```
+
 
 ## Violin Plot
 
-```{r violin, warning=FALSE, fig.cap="Body-mass distributions for three penguin species shown as violin plots."}
-ggplot(data = penguins) +
-  geom_violin(aes(x = species, y = body_mass_g), fill = "#BBBBBB") +
-  theme_cowplot() +
-  xlab("species") +
-  ylab("body mass (g)")
+```{r violin, warning=FALSE, fig.cap="Distributions of daily latent heat flux during May at 5 NEON sites shown violin plots."}
+terrestrial_daily_targets %>% 
+  drop_na(le) %>%
+  filter(month(time) == 5, 
+         siteID %in% c("BART", "CLBJ", "KONZ", "ORNL", "OSBS")) %>%
+  ggplot(aes(x = siteID, y = le))+
+  geom_violin(fill = "#78A481") +
+  theme_minimal() +
+  xlab("NEON site") +
+  ylab("latent heat flux (W m<sup>-2</sup>)")+
+  theme(axis.title.y = element_markdown())
 ```
 
 ## Ridgeline Plot 
 
-```{r ridgeline, warning=FALSE, fig.cap="Body-mass distributions for three penguin species shown as staggered density plots or 'ridgeline' plots."}
-ggplot(data = penguins) +
-  geom_density_ridges(aes(x = body_mass_g, y = species), fill = "#BBBBBB") +
-  theme_minimal_grid() +
-  xlab("species") +
-  ylab("body mass (g)")
+```{r ridgeline, warning=FALSE, fig.cap="Distributions of daily latent heat flux during May at 10 NEON sites shown as staggered density plots or 'ridgeline' plots."}
+terrestrial_daily_targets %>% 
+  drop_na(le) %>%
+  filter(month(time) == 5, 
+         siteID %in% c("BART", "CLBJ", "KONZ", "ORNL", "OSBS")) %>%
+  ggplot(aes(x = le, y = siteID))+
+  geom_density_ridges(fill = "#78A481") +
+  theme_minimal() +
+  ylab("NEON site") +
+  xlab("latent heat flux (W m<sup>-2</sup>)")+
+  theme(axis.title.x = element_markdown())
 ```
 
 ## Scatterplot
@@ -134,7 +156,7 @@ aquatics_targets %>%
 
 ## Line graph
 
-```{r line, fig.cap="Line graph of dissolved oxygen concentrations at the Posey Creek NEON site, 2019-2020"}
+```{r line, fig.cap="Line graph of mean daily dissolved oxygen concentrations at the Posey Creek NEON site, 2019-2020"}
 aquatics_targets %>% 
   filter(year(time) <= 2020, 
          year(time) >= 2019,
@@ -161,29 +183,53 @@ aquatics_targets %>%
 
 ## Pairs plots and Correlograms
 
-```{r pairs, fig.cap = "Combined scatterplot matrix and correlation matrix for three targets in the daily terrestrial forecast challenge."}
-terrestrial_daily_targets %>%
-  select("ecosystem exchange" = "nee", "evapotranspiration" = "le", "soil moisture" = "vswc") %>% 
+```{r pairs, fig.cap = "Combined scatterplot matrix and correlation matrix for five weather variables at the Oak Ridge National Lab NEON site."}
+library(here)
+drivers <- neon4cast::stack_noaa(dir = here("drivers"), model = "NOAAGEFS_1hr_stacked")
+
+drivers %>% 
+  mutate(date = as_date(time)) %>% 
+  group_by(date) %>% 
+  summarize(air_temperature = mean(air_temperature, na.rm = TRUE),
+            "air pressure" = mean(air_pressure, na.rm = TRUE),
+            "longwave flux" = mean(surface_downwelling_longwave_flux_in_air, na.rm = TRUE),
+            "shortwave flux" = mean(surface_downwelling_shortwave_flux_in_air, na.rm = TRUE),
+            "relative humidity" = mean(relative_humidity, na.rm = TRUE),
+            "wind speed" = mean(wind_speed, na.rm = TRUE),
+            .groups = "drop") %>% 
+  mutate("air temperature" = air_temperature - 273.15) %>%
+  filter(`air temperature`< 40) %>%
+  select("air temperature", "air pressure", "relative humidity", "wind speed", "longwave flux") %>%
   ggpairs()+
-  theme_minimal_grid(font_size = 12)
+  theme_minimal_grid(font_size = 10)
+
+
 ```
 
 ## Barplots
 
-```{r barplot, fig.cap="Number of penguins observed at three islands in Palmer Archipelago, Antarctica, 2007-2009."}
-ggplot(data = penguins) +
-  geom_bar(aes(x = island), fill = "#4477AA") +
-  theme_minimal_hgrid() +
-  xlab("island") +
-  ylab("count")
+```{r barplot, fig.cap="Barplot showing the mean density of *amblyomma americanum* larvae observed in June 2019 at 5 NEON sites"}
+tick_targets %>%
+  filter(year(time) == 2019, month(time) == 6, siteID %in% c("UKFS", "TALL", "SERC", "ORNL", "KONZ")) %>%
+  group_by(siteID) %>%
+  summarize(`Amblyomma americanum` = mean(`Amblyomma americanum`)) %>%
+  arrange(desc(`Amblyomma americanum`)) %>%
+  mutate(siteID = factor(siteID, levels = siteID)) %>%
+  ggplot(aes(x = siteID, y = `Amblyomma americanum`))+
+  geom_col(fill =  "#7C7BB2" )+
+  ylab("*Amblyomma americanum* density (ticks per 1600 m<sup>2</sup>)")+
+  xlab("NEON site") +
+  theme_minimal_hgrid()+
+  theme(axis.title.y = element_markdown())
+  
 ```
 
 ## Heatmap
 
 ```{r heatmap, fig.cap = "Heatmap of monthly beetle species richness observations at 47 NEON sites, 2017-2019.", fig.height = 6, fig.width  = 5}
 siteIDLevels <- beetle_targets %>%
-  filter(year(time) >=2017,
-         year(time) <=2019) %>%
+  filter(year(time) >= 2017,
+         year(time) <= 2019) %>%
   group_by(siteID) %>%
   summarise(meanRichness = mean(richness, na.rm = TRUE)) %>%
   arrange(meanRichness) %>%
@@ -202,7 +248,7 @@ expand_grid(year = 2017:2019,
   mutate(siteID = factor(siteID, levels = siteIDLevels)) %>%
 ggplot(aes(x = monthYear, y = siteID)) +
   geom_tile(width = 0.9, height = 0.9, aes(fill = richness)) + 
-  theme_cowplot(font_size = 13)+
+  theme_cowplot(font_size = 12)+
   scale_fill_viridis(option = "B", na.value = "#BBBBBB", direction = -1, end = 0.9) +
   ylab("site")+
   theme(axis.line = element_blank(),
@@ -232,27 +278,23 @@ annotate("text",
 
 ## Composite Plots
 
-```{r facet, fig.cap = "Scatterplots showing tick counts per square meter for epidemiological weeks during which sampling occurred in 2019. Plots are faceted by NEON site and tick species."}
+```{r facet, fig.cap = "Stacked line plots of greenness and redness index at the Harvard Forest NEON site in 2021."}
 
-species.labs <- c("amblyomma_americanum" = "Amblyomma americanum", 
-                  "ixodes_scapularis" = "Ixodes scapularis")
-tick_targets %>%
-  drop_na(totalSampledArea) %>%
-  filter(Year == 2019, siteID %in% c("ORNL", "SCBI", "SERC")) %>%
-  group_by(epiWeek, siteID) %>%
-  summarise(amblyomma_americanum = mean(amblyomma_americanum/totalSampledArea, na.rm = TRUE), 
-            ixodes_scapularis = mean(ixodes_scapularis/totalSampledArea, na.rm = TRUE)) %>%
-  pivot_longer(cols = c("amblyomma_americanum","ixodes_scapularis"),
-               names_to = "species", 
-               values_to = "ticks_m2_week") %>%
-ggplot(aes(x = epiWeek, y = ticks_m2_week, color = species)) +
-  geom_point(size = 2.5)+
-  facet_grid(species ~ siteID,
-             labeller = labeller(species = species.labs))+
-  xlim(c(10,45))+
-  xlab("ISO week")+
-  ylab(expression(paste("number of ticks per ", m^2)))+
-  scale_color_manual(values = c("#BB5566", "#004488"))+
-  theme(legend.position = "none",
-        strip.text.y = element_text(face = "italic"))
+filteredData <- pheno_targets %>%
+  filter(siteID == "HARV", 
+         year(time) == 2021) 
+
+red <- ggplot(filteredData, aes(x = time, y = rcc_90))+
+  geom_line(color = "#841859") + 
+  ylab("redness index")+
+  theme_minimal_grid()+
+  theme(axis.title.x = element_blank())
+
+green <- ggplot(filteredData, aes(x = time, y = gcc_90))+
+  geom_line(color = "#005600") + 
+  ylab("greenness index")+
+  theme_minimal_grid()+
+  theme(axis.title.x = element_blank())
+
+red + green+ plot_layout(nrow = 2, byrow = FALSE)
 ```
