@@ -9,6 +9,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE) # Show code
 # Load packages
 library(tidyverse)
 library(lubridate)
+library(here)
 library(neon4cast)
 
 library(cowplot)
@@ -184,7 +185,6 @@ aquatics_targets %>%
 ## Pairs plots and Correlograms
 
 ```{r pairs, fig.cap = "Combined scatterplot matrix and correlation matrix for five weather variables at the Oak Ridge National Lab NEON site."}
-library(here)
 drivers <- neon4cast::stack_noaa(dir = here("drivers"), model = "NOAAGEFS_1hr_stacked")
 
 drivers %>% 
