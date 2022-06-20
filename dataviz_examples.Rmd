@@ -185,7 +185,17 @@ aquatics_targets %>%
 ## Pairs plots and Correlograms
 
 ```{r pairs, fig.cap = "Combined scatterplot matrix and correlation matrix for five weather variables at the Oak Ridge National Lab NEON site."}
-drivers <- neon4cast::stack_noaa(dir = here("drivers"), model = "NOAAGEFS_1hr_stacked")
+neon4cast::get_stacked_noaa_s3(
+  tempdir(),
+  site = sites[i], 
+  averaged = FALSE, 
+  s3_region = "data"
+)
+
+drivers <- neon4cast::stack_noaa(
+  dir = file.path(tempdir(), "drivers"), 
+  model = "NOAAGEFS_1hr_stacked"
+)
 
 drivers %>% 
   mutate(date = as_date(time)) %>% 
@@ -202,7 +212,6 @@ drivers %>%
   select("air temperature", "air pressure", "relative humidity", "wind speed", "longwave flux") %>%
   ggpairs()+
   theme_minimal_grid(font_size = 10)
-
 
 ```
 
